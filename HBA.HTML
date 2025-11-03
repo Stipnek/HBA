@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Happy Birthday My Lovely Wify</title>
+<style>
+  body { margin: 0; overflow: hidden; background: #000; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+window.addEventListener('resize', () => {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+});
+
+// Частицы текста
+class Particle {
+  constructor(x, y) {
+    this.x = x + Math.random()*10-5;
+    this.y = y + Math.random()*10-5;
+    this.origX = x;
+    this.origY = y;
+    this.size = Math.random()*2+1;
+    this.vx = 0;
+    this.vy = 0;
+  }
+  update(mouse) {
+    let dx = this.x - mouse.x;
+    let dy = this.y - mouse.y;
+    let dist = Math.sqrt(dx*dx + dy*dy);
+    if(dist < mouse.radius){
+      let angle = Math.atan2(dy, dx);
+      let force = (mouse.radius - dist)/mouse.radius;
+      this.vx += Math.cos(angle)*force*5;
+      this.vy += Math.sin(angle)*force*5;
+    }
+    this.vx += (this.origX - this.x)*0.05;
+    this.vy += (this.origY - this.y)*0.05;
+    this.vx *= 0.85;
+    this.vy *= 0.85;
+    this.x += this.vx;
+    this.y += this.vy;
+  }
+  draw() {
+    ctx.fillStyle = "#ff69b4";
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI*2);
+    ctx.fill();
+  }
+}
+
+// Салютные частицы
+class Firework {
+  constructor() {
+    this.x = Math.random()*canvas.width;
+    this.y = Math.random()*canvas.height/2;
+    this.particles = [];
+    this.createParticles();
+  }
+  createParticles() {
+    for(let i=0;i<30;i++){
+      let angle = Math.random()*2*Math.PI;
+      let speed = Math.random()*5 + 2;
+      this.particles.push({
+        x: this.x, y: this.y,
+        vx: Math.cos(angle)*speed,
+        vy: Math.sin(angle)*speed,
+        size: Math.random()*2+1,
+        color: `hsl(${Math.random()*360},100%,60%)`,
+        life: Math.random()*50+50
+      });
+    }
+  }
+  update() {
+    this.particles.forEach(p=>{
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.05; // гравитация
+      p.life--;
+    });
+    this.particles = this.particles.filter(p=>p.life>0);
+  }
+  draw() {
+    this.particles.forEach(p=>{
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,p.size,0,Math.PI*2);
+      ctx.fill();
+    });
+  }
+}
+
+// Генерация текста в частицы
+ctx.font = "bold 100px Arial";
+ctx.fillStyle = "white";
+ctx.textAlign = "center";
+ctx.fillText("Happy Birthday Ana", canvas.width/2, canvas.height/2);
+let imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
+let particles = [];
+for(let y=0;y<canvas.height;y+=6){
+  for(let x=0;x<canvas.width;x+=6){
+    let alpha = imageData.data[(y*canvas.width + x)*4 + 3];
+    if(alpha > 128){
+      particles.push(new Particle(x,y));
+    }
+  }
+}
+
+let fireworks = [];
+function createFirework() {
+  if(Math.random()<0.02){ // шанс появления нового салюта
+    fireworks.push(new Firework());
+  }
+}
+
+let mouse = {x:0, y:0, radius:100};
+
+// Мышь
+canvas.addEventListener('mousemove', e => { 
+  mouse.x = e.clientX; 
+  mouse.y = e.clientY; 
+});
+
+// Сенсорный экран
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault(); // предотвращаем скролл
+  mouse.x = e.touches[0].clientX;
+  mouse.y = e.touches[0].clientY;
+}, {passive: false});
+
+function animate(){
+  ctx.fillStyle = "rgba(0,0,0,0.15)";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  
+  particles.forEach(p => { p.update(mouse); p.draw(); });
+  
+  createFirework();
+  fireworks.forEach(f => { f.update(); f.draw(); });
+  fireworks = fireworks.filter(f => f.particles.length>0);
+
+  requestAnimationFrame(animate);
+}
+
+animate();
+</script>
+</body>
+</html>
